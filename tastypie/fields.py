@@ -560,21 +560,21 @@ class RelatedField(ApiField):
         """
         should_dehydrate_full_resource = self.should_full_dehydrate(bundle, for_list=for_list)
 
-            if should_dehydrate_full_resource:
-                depth = getattr(bundle, 'depth', None)
-                if depth is None:
-                    depth = self.max_depth
-                if depth is None or depth:
-                    # ZOMG extra data and big payloads.
-                    bundle = related_resource.build_bundle(
-                    obj=related_resource.instance,
-                    request=bundle.request,
-                    objects_saved=bundle.objects_saved
-                )
-                    bundle.depth = depth
-                    return related_resource.full_dehydrate(bundle)
-         # If not full or we've run out of depth, Be a good netizen.
-         return related_resource.get_resource_uri(bundle)
+        if should_dehydrate_full_resource:
+            depth = getattr(bundle, 'depth', None)
+            if depth is None:
+                depth = self.max_depth
+            if depth is None or depth:
+                # ZOMG extra data and big payloads.
+                bundle = related_resource.build_bundle(
+                obj=related_resource.instance,
+                request=bundle.request,
+                objects_saved=bundle.objects_saved
+            )
+                bundle.depth = depth
+                return related_resource.full_dehydrate(bundle)
+        # If not full or we've run out of depth, Be a good netizen.
+        return related_resource.get_resource_uri(bundle)
 
     def resource_from_uri(self, fk_resource, uri, request=None, related_obj=None, related_name=None):
         """
