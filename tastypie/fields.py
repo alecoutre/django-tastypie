@@ -27,7 +27,7 @@ class ApiField(object):
     dehydrated_type = 'string'
     help_text = ''
 
-    def __init__(self, attribute=None, default=NOT_PROVIDED, null=False, blank=False, readonly=False, unique=False, help_text=None, use_in='all'):
+    def __init__(self, attribute=None, default=NOT_PROVIDED, null=False, blank=False, readonly=False, unique=False, help_text=None, use_in='all', verbose_name=None):
         """
         Sets up the field. This is generally called when the containing
         ``Resource`` is initialized.
@@ -76,6 +76,7 @@ class ApiField(object):
         self.value = None
         self.unique = unique
         self.use_in = 'all'
+        self.verbose_name = verbose_name
 
         if use_in in ['all', 'detail', 'list'] or callable(use_in):
             self.use_in = use_in
@@ -412,7 +413,7 @@ class RelatedField(ApiField):
     self_referential = False
     help_text = 'A related resource. Can be either a URI or set of nested resource data.'
 
-    def __init__(self, to, attribute, related_name=None, default=NOT_PROVIDED, null=False, blank=False, readonly=False, full=False, unique=False, help_text=None, use_in='all', full_list=True, full_detail=True):
+    def __init__(self, to, attribute, related_name=None, default=NOT_PROVIDED, null=False, blank=False, readonly=False, full=False, unique=False, help_text=None, use_in='all', full_list=True, full_detail=True, verbose_name=None):
         """
         Builds the field and prepares it to access to related data.
 
@@ -485,6 +486,7 @@ class RelatedField(ApiField):
         self.use_in = 'all'
         self.full_list = full_list
         self.full_detail = full_detail
+        self.verbose_name = verbose_name
 
         if use_in in ['all', 'detail', 'list'] or callable(use_in):
             self.use_in = use_in
