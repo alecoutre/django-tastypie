@@ -843,7 +843,6 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
 
         # Dehydrate each field.
         for field_name, field_object in self.fields.items():
-            print field_name
             _saved_fields = []
 
             if hasattr(bundle, 'fields'):
