@@ -835,8 +835,43 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         """
         use_in = ['all', 'list' if for_list else 'detail']
 
+        if type(bundle.obj) is dict:
+            for field_name in bundle.obj:
+                bundle.data[field_name] = bundle.obj.get(field_name)
+            bundle = self.dehydrate(bundle)
+            return bundle
+
         # Dehydrate each field.
         for field_name, field_object in self.fields.items():
+            print field_name
+            _saved_fields = []
+
+            if hasattr(bundle, 'fields'):
+                _saved_fields = bundle.fields
+
+                field_found = False
+                for field in bundle.fields:
+                    if field_name == field.get('field'):
+                        field_found = True
+
+                        if field.get('children'):
+                            children = field['children']
+                            _child_field = {}
+                            _child_field['field'] = children[0]
+                            if len(children) > 1:
+                                _child_field['children'] = field['children'][1:]
+                            bundle.fields = [_child_field]
+                        continue
+
+                if not field_found and (bundle.obj._meta.pk.name != field_name):
+                    continue
+
+            # If user has no permission, skip
+            if callable(bundle.obj): 
+                permission = '%s.view_%s_%s' % (bundle.obj._meta.app_label, bundle.obj._meta.module_name, field_name)
+                if not bundle.request.user.has_perm(permission):
+                    continue
+
             # If it's not for use in this mode, skip
             field_use_in = getattr(field_object, 'use_in', 'all')
             if callable(field_use_in):
@@ -853,9 +888,11 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
 
             bundle.data[field_name] = field_object.dehydrate(bundle, for_list=for_list)
 
+            if len(_saved_fields) > 1:
+                bundle.fields = _saved_fields
+
             # Check for an optional method to do further dehydration.
             method = getattr(self, "dehydrate_%s" % field_name, None)
-
             if method:
                 bundle.data[field_name] = method(bundle)
 
@@ -1282,7 +1319,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
 
         Should return a HttpResponse (200 OK).
         """
-        # TODO: Uncached for now. Invalidation that works for everyone may be
+         # TODO: Uncached for now. Invalidation that works for everyone may be
         #       impossible.
         base_bundle = self.build_bundle(request=request)
         objects = self.obj_get_list(bundle=base_bundle, **self.remove_api_resource_names(kwargs))
@@ -1294,8 +1331,30 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         # Dehydrate the bundles in preparation for serialization.
         bundles = []
 
+        if request.GET.get('fields'):
+            fields = request.GET.get('fields').split(',')
+            fields_parsed = []
+            for idx, field in enumerate(fields):
+                if field.count('__') == 0:
+                    fields_parsed.append({'field': field})
+                    continue
+                fields[idx] = field.split('__')
+
+                # Don't append field already created
+                _field_already_added = False
+                for _field in fields_parsed:
+                    if _field['field'] == fields[idx][0]:
+                        _field['children'].append(fields[idx][1:])
+                        _field_already_added = True
+                        continue
+                if not _field_already_added:
+                    fields_parsed.append({'field': fields[idx][0], 'children': fields[idx][1:]})
+
         for obj in to_be_serialized[self._meta.collection_name]:
             bundle = self.build_bundle(obj=obj, request=request)
+            # How ugly is that
+            if request.GET.get('fields'):
+                bundle.fields = fields_parsed
             bundles.append(self.full_dehydrate(bundle, for_list=True))
 
         to_be_serialized[self._meta.collection_name] = bundles

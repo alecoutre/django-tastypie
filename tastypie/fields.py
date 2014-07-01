@@ -566,11 +566,16 @@ class RelatedField(ApiField):
                 depth = self.max_depth
             if depth is None or depth:
                 # ZOMG extra data and big payloads.
+                __fields = getattr(bundle, 'fields', None)
+
                 bundle = related_resource.build_bundle(
                 obj=related_resource.instance,
                 request=bundle.request,
-                objects_saved=bundle.objects_saved
-            )
+                objects_saved=bundle.objects_saved)
+
+                if __fields != None:
+                    bundle.fields = __fields
+
                 bundle.depth = depth
                 return related_resource.full_dehydrate(bundle)
         # If not full or we've run out of depth, Be a good netizen.
@@ -736,6 +741,7 @@ class ToOneField(RelatedField):
 
         self.fk_resource = self.get_related_resource(foreign_obj)
         fk_bundle = Bundle(obj=foreign_obj, request=bundle.request)
+        fk_bundle.fields = getattr(bundle, 'fields', None)
         depth = getattr(bundle, 'depth', None)
         if depth is None:
             depth = self.max_depth
@@ -835,6 +841,7 @@ class ToManyField(RelatedField):
         for m2m in the_m2ms.all():
             m2m_resource = self.get_related_resource(m2m)
             m2m_bundle = Bundle(obj=m2m, request=bundle.request)
+            m2m_bundle.fields = getattr(bundle, 'fields', None)
             self.m2m_resources.append(m2m_resource)
             if depth is not None:
                 m2m_bundle.depth = depth - 1
