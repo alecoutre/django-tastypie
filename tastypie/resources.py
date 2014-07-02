@@ -855,11 +855,13 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
 
                         if field.get('children'):
                             children = field['children']
-                            _child_field = {}
-                            _child_field['field'] = children[0]
-                            if len(children) > 1:
-                                _child_field['children'] = field['children'][1:]
-                            bundle.fields = [_child_field]
+                            _child_field = []
+                            for child in children:
+                                if isinstance(child, basestring):
+                                    _child_field.append({'field': child})
+                                else:
+                                    _child_field.append({'field': child[0], 'children': child[1:]})
+                            bundle.fields = _child_field
                         continue
 
                 if not field_found and (bundle.obj._meta.pk.name != field_name):
