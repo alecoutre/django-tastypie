@@ -835,7 +835,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         """
         use_in = ['all', 'list' if for_list else 'detail']
 
-        if type(bundle.obj) is dict:
+        if type(bundle.obj) is dict and bundle.request.GET.get('values'):
             for field_name in bundle.obj:
                 bundle.data[field_name] = bundle.obj.get(field_name)
             bundle = self.dehydrate(bundle)
