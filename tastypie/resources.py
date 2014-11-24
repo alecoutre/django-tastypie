@@ -123,13 +123,14 @@ class DeclarativeMetaclass(type):
 
             for p in parents:
                 parent_fields = getattr(p, 'base_fields', {})
-
-                for field_name, field_object in parent_fields.items():
+                fields_list = parent_fields.items()
+                for field_name, field_object in fields_list:
                     attrs['base_fields'][field_name] = deepcopy(field_object)
         except NameError:
             pass
 
-        for field_name, obj in attrs.copy().items():
+        fields_list = attrs.copy().items()
+        for field_name, obj in fields_list:
             # Look for ``dehydrated_type`` instead of doing ``isinstance``,
             # which can break down if Tastypie is re-namespaced as something
             # else.
@@ -156,7 +157,8 @@ class DeclarativeMetaclass(type):
         elif 'resource_uri' in new_class.base_fields and not 'resource_uri' in attrs:
             del(new_class.base_fields['resource_uri'])
 
-        for field_name, field_object in new_class.base_fields.items():
+        fields_list = new_class.base_fields.items()
+        for field_name, field_object in fields_list:
             if hasattr(field_object, 'contribute_to_class'):
                 field_object.contribute_to_class(new_class, field_name)
 
@@ -842,7 +844,8 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
             return bundle
 
         # Dehydrate each field.
-        for field_name, field_object in self.fields.items():
+        fields_list = self.fields.items()
+        for field_name, field_object in fields_list:
             _saved_fields = []
 
             if hasattr(bundle, 'fields'):
@@ -922,7 +925,8 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
 
         bundle = self.hydrate(bundle)
 
-        for field_name, field_object in self.fields.items():
+        fields_list = self.fields.items()
+        for field_name, field_object in fields_list:
             if field_object.readonly is True:
                 continue
 
@@ -979,7 +983,8 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         if bundle.obj is None:
             raise HydrationError("You must call 'full_hydrate' before attempting to run 'hydrate_m2m' on %r." % self)
 
-        for field_name, field_object in self.fields.items():
+        fields_list = self.fields.items()
+        for field_name, field_object in fields_list:
             if not getattr(field_object, 'is_m2m', False):
                 continue
 
@@ -1022,6 +1027,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         if self._meta.filtering:
             data['filtering'] = self._meta.filtering
 
+        fields_list = self.fields.items()
         for field_name, field_object in self.fields.items():
             data['fields'][field_name] = {
                 'default': field_object.default,
@@ -2140,7 +2146,8 @@ class BaseModelResource(Resource):
         """
         try:
             object_list = self.get_object_list(bundle.request).filter(**kwargs)
-            stringified_kwargs = ', '.join(["%s=%s" % (k, v) for k, v in kwargs.items()])
+            kwargs_list = kwargs.items()
+            stringified_kwargs = ', '.join(["%s=%s" % (k, v) for k, v in kwargs_list])
 
             if len(object_list) <= 0:
                 raise self._meta.object_class.DoesNotExist("Couldn't find an instance of '%s' which matched '%s'." % (self._meta.object_class.__name__, stringified_kwargs))
@@ -2159,7 +2166,8 @@ class BaseModelResource(Resource):
         """
         bundle.obj = self._meta.object_class()
 
-        for key, value in kwargs.items():
+        kwargs_list = kwargs.items()
+        for key, value in kwargs_list:
             setattr(bundle.obj, key, value)
 
         bundle = self.full_hydrate(bundle)
@@ -2329,7 +2337,8 @@ class BaseModelResource(Resource):
         call ``save`` on them if they have related, non-M2M data.
         M2M data is handled by the ``ModelResource.save_m2m`` method.
         """
-        for field_name, field_object in self.fields.items():
+        fields_list = self.fields.items()
+        for field_name, field_object in fields_list:
             if not getattr(field_object, 'is_related', False):
                 continue
 
@@ -2391,7 +2400,8 @@ class BaseModelResource(Resource):
         Currently slightly inefficient in that it will clear out the whole
         relation and recreate the related data as needed.
         """
-        for field_name, field_object in self.fields.items():
+        fields_list = self.fields.items()
+        for field_name, field_object in fields_list:
             if not getattr(field_object, 'is_m2m', False):
                 continue
 
