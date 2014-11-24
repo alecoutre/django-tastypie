@@ -828,6 +828,10 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         bundle = self.build_bundle(request=request)
         return self.obj_get(bundle=bundle, **self.remove_api_resource_names(kwargs))
 
+
+    def is_authorized(self, bundle, permission):
+        return True
+
     # Data preparation.
 
     def full_dehydrate(self, bundle, for_list=False):
@@ -847,6 +851,12 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         fields_list = self.fields.items()
         for field_name, field_object in fields_list:
             _saved_fields = []
+
+            # If user has no permission, skip
+            if getattr(field_object, 'is_related', False) and hasattr(field_object.to, 'Meta'):
+                model_permission = '%s.view_%s' % (bundle.obj._meta.app_label, field_object.to.Meta.resource_name)
+                if not self.is_authorized(bundle, model_permission):
+                    continue
 
             if hasattr(bundle, 'fields'):
                 _saved_fields = bundle.fields
