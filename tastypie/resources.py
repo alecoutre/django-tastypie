@@ -841,7 +841,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         """
         use_in = ['all', 'list' if for_list else 'detail']
 
-        if type(bundle.obj) is dict and bundle.request.GET.get('values'):
+        if type(bundle.obj) is dict:
             for field_name in bundle.obj:
                 bundle.data[field_name] = bundle.obj.get(field_name)
             bundle = self.dehydrate(bundle)
@@ -851,12 +851,15 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         fields_list = self.fields.items()
         for field_name, field_object in fields_list:
             _saved_fields = []
+            field_should_be_displayed = False
 
             # If user has no permission, skip
             if getattr(field_object, 'is_related', False) and hasattr(field_object.to, 'Meta'):
                 model_permission = '%s.view_%s' % (bundle.obj._meta.app_label, field_object.to.Meta.resource_name)
                 if not self.is_authorized(bundle, model_permission):
                     continue
+
+            field_should_be_displayed = field_name in self.Meta.mandatory_fields if hasattr(self.Meta, 'mandatory_fields') else False
 
             if hasattr(bundle, 'fields'):
                 _saved_fields = bundle.fields
@@ -877,13 +880,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
                             bundle.fields = _child_field
                         continue
 
-                if not field_found and (bundle.obj._meta.pk.name != field_name):
-                    continue
-
-            # If user has no permission, skip
-            if callable(bundle.obj): 
-                permission = '%s.view_%s_%s' % (bundle.obj._meta.app_label, bundle.obj._meta.module_name, field_name)
-                if not bundle.request.user.has_perm(permission):
+                if not field_found and (bundle.obj._meta.pk.name != field_name) and not field_should_be_displayed:
                     continue
 
             # If it's not for use in this mode, skip
