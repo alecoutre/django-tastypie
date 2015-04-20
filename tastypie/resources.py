@@ -839,6 +839,8 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         to populate the resource.
         """
         use_in = ['all', 'list' if for_list else 'detail']
+        is_authorized = self.is_authorized
+        mandatory_fields = self.Meta.mandatory_fields if hasattr(self.Meta, 'mandatory_fields') else []
 
         if type(bundle.obj) is dict:
             for field_name in bundle.obj:
@@ -854,11 +856,11 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
 
             # If user has no permission, skip
             if getattr(field_object, 'is_related', False) and hasattr(field_object.to, 'Meta'):
-                model_permission = '%s.view_%s' % (bundle.obj._meta.app_label, field_object.to.Meta.resource_name)
-                if not self.is_authorized(bundle, model_permission):
+                model_permission = '%s.view_%s' % (field_object.to.Meta.queryset.model._meta.app_label, field_object.to.Meta.resource_name)
+                if not is_authorized(bundle, model_permission):
                     continue
 
-            field_should_be_displayed = field_name in self.Meta.mandatory_fields if hasattr(self.Meta, 'mandatory_fields') else False
+            field_should_be_displayed = field_name in mandatory_fields
 
             if hasattr(bundle, 'fields'):
                 _saved_fields = bundle.fields
@@ -872,7 +874,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
                             children = field['children']
                             _child_field = []
                             for child in children:
-                                if isinstance(child, basestring):
+                                if isinstance(child, str):
                                     _child_field.append({'field': child})
                                 else:
                                     _child_field.append({'field': child[0], 'children': child[1:]})
