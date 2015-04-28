@@ -85,7 +85,7 @@ def is_valid_javascript_identifier(identifier, escape=r'\\u', ucd_cat=category):
                 return False
             add_char(segment[4:])
 
-        identifier = u''.join(new)
+        identifier = ''.join(new)
 
     if is_reserved_js_word(identifier):
         return False
@@ -107,11 +107,11 @@ def is_valid_javascript_identifier(identifier, escape=r'\\u', ucd_cat=category):
 def is_valid_jsonp_callback_value(value):
     """Return whether the given ``value`` can be used as a JSON-P callback."""
 
-    for identifier in value.split(u'.'):
+    for identifier in value.split('.'):
         while '[' in identifier:
             if not has_valid_array_index(identifier):
                 return False
-            identifier = replace_array_index(u'', identifier)
+            identifier = replace_array_index('', identifier)
         if not is_valid_javascript_identifier(identifier):
             return False
 

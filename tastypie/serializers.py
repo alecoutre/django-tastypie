@@ -53,7 +53,7 @@ if yaml is not None:
             except UnicodeEncodeError:
                 return value
 
-    TastypieConstructor.add_constructor(u'tag:yaml.org,2002:python/unicode', TastypieConstructor.construct_yaml_unicode_dammit)
+    TastypieConstructor.add_constructor('tag:yaml.org,2002:python/unicode', TastypieConstructor.construct_yaml_unicode_dammit)
 
     class TastypieLoader(Reader, Scanner, Parser, Composer, TastypieConstructor, Resolver):
         def __init__(self, stream):
@@ -394,8 +394,8 @@ class Serializer(object):
         """
         options = options or {}
         json = self.to_json(data, options)
-        json = json.replace(u'\u2028', u'\\u2028').replace(u'\u2029', u'\\u2029')
-        return u'%s(%s)' % (options['callback'], json)
+        json = json.replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
+        return '%s(%s)' % (options['callback'], json)
 
     def to_xml(self, data, options=None):
         """

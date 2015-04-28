@@ -3,6 +3,7 @@ from __future__ import with_statement
 from copy import deepcopy
 import logging
 import warnings
+import django
 
 from django.conf import settings
 from django.conf.urls import patterns, url
@@ -31,7 +32,7 @@ from tastypie.throttle import BaseThrottle
 from tastypie.utils import is_valid_jsonp_callback_value, dict_strip_unicode_keys, trailing_slash
 from tastypie.utils.mime import determine_format, build_content_type
 from tastypie.validation import Validation
-from tastypie.compat import get_module_name, atomic_decorator
+# from tastypie.compat import atomic_decorator
 
 # If ``csrf_exempt`` isn't present, stub it.
 try:
@@ -40,6 +41,34 @@ except ImportError:
     def csrf_exempt(func):
         return func
 
+AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
+
+# Django 1.5+ compatibility
+if django.VERSION >= (1, 5):
+    def get_user_model():
+        from django.contrib.auth import get_user_model as django_get_user_model
+
+        return django_get_user_model()
+
+    def get_username_field():
+        return get_user_model().USERNAME_FIELD
+else:
+    def get_user_model():
+        from django.contrib.auth.models import User
+
+        return User
+
+    def get_username_field():
+        return 'username'
+
+def get_module_name(meta):
+    return getattr(meta, 'model_name', None) or getattr(meta, 'module_name')
+
+# commit_on_success replaced by atomic in Django >=1.8
+atomic_decorator = getattr(django.db.transaction, 'atomic', None) or getattr(django.db.transaction, 'commit_on_success')
+
+def get_module_name(meta):
+    return getattr(meta, 'model_name', None) or getattr(meta, 'module_name')
 
 def sanitize(text):
     # We put the single quotes back, due to their frequent usage in exception
@@ -2307,7 +2336,7 @@ class BaseModelResource(Resource):
                 bundle.obj.delete()
 
     def create_identifier(self, obj):
-        return u"%s.%s.%s" % (obj._meta.app_label, get_module_name(obj._meta), obj.pk)
+        return "%s.%s.%s" % (obj._meta.app_label, get_module_name(obj._meta), obj.pk)
 
     def save(self, bundle, skip_errors=False):
         self.is_valid(bundle)

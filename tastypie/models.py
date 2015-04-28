@@ -37,7 +37,7 @@ if 'django.contrib.auth' in settings.INSTALLED_APPS:
         created = models.DateTimeField(default=now)
 
         def __unicode__(self):
-            return u"%s for %s" % (self.key, self.user)
+            return "%s for %s" % (self.key, self.user)
 
         def save(self, *args, **kwargs):
             if not self.key:
