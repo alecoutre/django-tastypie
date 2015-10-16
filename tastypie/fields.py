@@ -848,7 +848,7 @@ class ToManyField(RelatedField):
         for m2m in the_m2ms.all():
             m2m_resource = self.get_related_resource(m2m)
             m2m_bundle = Bundle(obj=m2m, request=bundle.request)
-            m2m_bundle.fields = getattr(bundle, 'fields', None)
+            # m2m_bundle.fields = getattr(bundle, 'fields', None)
             self.m2m_resources.append(m2m_resource)
             if depth is not None:
                 m2m_bundle.depth = depth - 1
