@@ -1363,8 +1363,9 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
 
         Should return a HttpResponse (200 OK).
         """
-         # TODO: Uncached for now. Invalidation that works for everyone may be
+        # TODO: Uncached for now. Invalidation that works for everyone may be
         #       impossible.
+        fields_parsed = []
         base_bundle = self.build_bundle(request=request)
         objects = self.obj_get_list(bundle=base_bundle, **self.remove_api_resource_names(kwargs))
         sorted_objects = self.apply_sorting(objects, options=request.GET)
