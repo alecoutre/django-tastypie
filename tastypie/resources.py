@@ -367,10 +367,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
             urls += overridden_urls
 
         urls += self.base_urls()
-        urlpatterns = patterns('',
-            *urls
-        )
-        return urlpatterns
+        return urls
 
     def determine_format(self, request):
         """
