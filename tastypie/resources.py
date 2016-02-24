@@ -866,6 +866,12 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         """
         data = bundle.data
 
+        if type(bundle.obj) is dict:
+            for field_name in bundle.obj:
+                bundle.data[field_name] = bundle.obj.get(field_name)
+            bundle = self.dehydrate(bundle)
+            return bundle
+
         api_name = self._meta.api_name
         resource_name = self._meta.resource_name
 
