@@ -6,7 +6,7 @@ import warnings
 import django
 
 from django.conf import settings
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, ValidationError
 from django.core.urlresolvers import NoReverseMatch, reverse, resolve, Resolver404, get_script_prefix
 from django.core.signals import got_request_exception
@@ -864,7 +864,9 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         Given a bundle with an object instance, extract the information from it
         to populate the resource.
         """
-        data = bundle.data
+        use_in = ['all', 'list' if for_list else 'detail']
+        is_authorized = self.is_authorized
+        mandatory_fields = self.Meta.mandatory_fields if hasattr(self.Meta, 'mandatory_fields') else []
 
         if type(bundle.obj) is dict:
             for field_name in bundle.obj:
@@ -872,32 +874,66 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
             bundle = self.dehydrate(bundle)
             return bundle
 
-        api_name = self._meta.api_name
-        resource_name = self._meta.resource_name
-
         # Dehydrate each field.
-        for field_name, field_object in self.fields.items():
+        fields_list = self.fields.items()
+        for field_name, field_object in fields_list:
+            _saved_fields = []
+            field_should_be_displayed = False
+
+            # If user has no permission, skip
+            if getattr(field_object, 'is_related', False) and hasattr(field_object.to, 'Meta'):
+                model_permission = '%s.view_%s' % (field_object.to.Meta.queryset.model._meta.app_label, field_object.to.Meta.resource_name)
+                if not is_authorized(bundle, model_permission):
+                    print(model_permission)
+                    continue
+
+            field_should_be_displayed = field_name in mandatory_fields
+
+            if hasattr(bundle, 'fields'):
+                _saved_fields = bundle.fields
+
+                field_found = False
+                for field in bundle.fields:
+                    if field_name == field.get('field'):
+                        field_found = True
+
+                        if field.get('children'):
+                            children = field['children']
+                            _child_field = []
+                            for child in children:
+                                if isinstance(child, str):
+                                    _child_field.append({'field': child})
+                                else:
+                                    _child_field.append({'field': child[0], 'children': child[1:]})
+                            bundle.fields = _child_field
+                        continue
+
+                if not field_found and (bundle.obj._meta.pk.name != field_name) and not field_should_be_displayed:
+                    continue
+
             # If it's not for use in this mode, skip
-            field_use_in = field_object.use_in
+            field_use_in = getattr(field_object, 'use_in', 'all')
             if callable(field_use_in):
                 if not field_use_in(bundle):
                     continue
             else:
-                if field_use_in not in ['all', 'list' if for_list else 'detail']:
+                if field_use_in not in use_in:
                     continue
 
             # A touch leaky but it makes URI resolution work.
-            if field_object.dehydrated_type == 'related':
-                field_object.api_name = api_name
-                field_object.resource_name = resource_name
+            if getattr(field_object, 'dehydrated_type', None) == 'related':
+                field_object.api_name = self._meta.api_name
+                field_object.resource_name = self._meta.resource_name
 
-            data[field_name] = field_object.dehydrate(bundle, for_list=for_list)
+            bundle.data[field_name] = field_object.dehydrate(bundle, for_list=for_list)
+
+            if len(_saved_fields) > 1:
+                bundle.fields = _saved_fields
 
             # Check for an optional method to do further dehydration.
             method = getattr(self, "dehydrate_%s" % field_name, None)
-
             if method:
-                data[field_name] = method(bundle)
+                bundle.data[field_name] = method(bundle)
 
         bundle = self.dehydrate(bundle)
         return bundle
@@ -1380,7 +1416,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         basic_bundle = self.build_bundle(request=request)
 
         try:
-            obj = self.obj_get(bundle=basic_bundle, **self.remove_api_resource_names(kwargs))
+            obj = self.cached_obj_get(bundle=basic_bundle, **self.remove_api_resource_names(kwargs))
         except ObjectDoesNotExist:
             return http.HttpNotFound()
         except MultipleObjectsReturned:
@@ -1676,7 +1712,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         # So first pull out the original object. This is essentially
         # ``get_detail``.
         try:
-            obj = self.obj_get(bundle=basic_bundle, **self.remove_api_resource_names(kwargs))
+            obj = self.cached_obj_get(bundle=basic_bundle, **self.remove_api_resource_names(kwargs))
         except ObjectDoesNotExist:
             return http.HttpNotFound()
         except MultipleObjectsReturned:
