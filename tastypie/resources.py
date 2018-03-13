@@ -58,7 +58,7 @@ from tastypie.utils import (
 )
 from tastypie.utils.mime import determine_format, build_content_type
 from tastypie.validation import Validation
-# from tastypie.compat import atomic_decorator
+from tastypie.compat import get_module_name, atomic_decorator
 
 
 def sanitize(text):
