@@ -171,17 +171,12 @@ class DeclarativeMetaclass(type):
         elif 'resource_uri' in new_class.base_fields and 'resource_uri' not in attrs:
             del(new_class.base_fields['resource_uri'])
 
-<<<<<<< HEAD
-        fields_list = new_class.base_fields.items()
-        for field_name, field_object in fields_list:
-=======
         if abstract and 'resource_uri' not in attrs:
             # abstract classes don't have resource_uris unless explicitly provided
             if 'resource_uri' in new_class.base_fields:
                 del(new_class.base_fields['resource_uri'])
 
         for field_name, field_object in new_class.base_fields.items():
->>>>>>> refs/remotes/django-tastypie/master
             if hasattr(field_object, 'contribute_to_class'):
                 field_object.contribute_to_class(new_class, field_name)
 
