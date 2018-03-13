@@ -3,7 +3,7 @@ from dateutil.tz import tzoffset
 from decimal import Decimal
 
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.http import HttpRequest
 
@@ -17,6 +17,7 @@ from tastypie.utils import aware_datetime
 
 from core.models import Note, Subject, MediaBit
 from core.tests.mocks import MockRequest
+User = get_user_model()
 
 
 class ApiFieldTestCase(TestCase):
@@ -96,6 +97,19 @@ class ApiFieldTestCase(TestCase):
         # Correct callable attribute.
         field_6 = ApiField(attribute='what_time_is_it', default=True)
         self.assertEqual(field_6.dehydrate(bundle), aware_datetime(2010, 4, 1, 0, 48))
+
+        # Wrong attribute with default and null=True should yield null
+        field_7 = ApiField(attribute='foo', null=True, default='bar')
+        self.assertEqual(field_7.dehydrate(bundle), None)
+
+        # Correct attribute with value of None, a default, and null=True
+        # should yield null
+        original_author = note.author
+        note.author = None
+        note.save()
+        field_8 = ApiField(attribute='author', null=True,
+                           default=original_author)
+        self.assertEqual(field_8.dehydrate(bundle), None)
 
     def test_convert(self):
         field_1 = ApiField()
