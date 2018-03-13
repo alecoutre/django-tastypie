@@ -60,11 +60,7 @@ class SimpleCache(NoCache):
         """
         super(SimpleCache, self).__init__(*args, **kwargs)
         self.cache = caches[cache_name]
-<<<<<<< HEAD
-        self.timeout = timeout or self.cache.default_timeout
-=======
         self.timeout = timeout if timeout is not None else self.cache.default_timeout
->>>>>>> refs/remotes/django-tastypie/master
         self.public = public
         self.private = private
 

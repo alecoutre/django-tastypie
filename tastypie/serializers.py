@@ -54,14 +54,10 @@ if yaml is not None:
             except UnicodeEncodeError:
                 return value
 
-<<<<<<< HEAD
-    TastypieConstructor.add_constructor('tag:yaml.org,2002:python/unicode', TastypieConstructor.construct_yaml_unicode_dammit)
-=======
     TastypieConstructor.add_constructor(
         u'tag:yaml.org,2002:python/unicode',
         TastypieConstructor.construct_yaml_unicode_dammit
     )
->>>>>>> refs/remotes/django-tastypie/master
 
     class TastypieLoader(Reader, Scanner, Parser, Composer,
             TastypieConstructor, Resolver):
@@ -446,15 +442,9 @@ class Serializer(object):
         details.
         """
         options = options or {}
-<<<<<<< HEAD
-        json = self.to_json(data, options)
-        json = json.replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
-        return '%s(%s)' % (options['callback'], json)
-=======
         jsonstr = self.to_json(data, options).replace(
             u'\u2028', u'\\u2028').replace(u'\u2029', u'\\u2029')
         return u'%s(%s)' % (options['callback'], jsonstr)
->>>>>>> refs/remotes/django-tastypie/master
 
     def to_xml(self, data, options=None):
         """

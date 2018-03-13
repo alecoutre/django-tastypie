@@ -37,13 +37,8 @@ if 'django.contrib.auth' in settings.INSTALLED_APPS:
         key = models.CharField(max_length=128, blank=True, default='', db_index=True)
         created = models.DateTimeField(default=now)
 
-<<<<<<< HEAD
-        def __unicode__(self):
-            return "%s for %s" % (self.key, self.user)
-=======
         def __str__(self):
             return u"%s for %s" % (self.key, self.user)
->>>>>>> refs/remotes/django-tastypie/master
 
         def save(self, *args, **kwargs):
             if not self.key:

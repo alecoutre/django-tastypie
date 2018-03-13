@@ -7,11 +7,6 @@ from decimal import Decimal
 import importlib
 
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-<<<<<<< HEAD
-from django.utils import datetime_safe
-import importlib
-from django.utils import six
-=======
 from django.db import models
 try:
     from django.db.models.fields.related import\
@@ -21,7 +16,6 @@ except ImportError:
         ReverseOneToOneDescriptor
 from django.utils import datetime_safe, six
 
->>>>>>> refs/remotes/django-tastypie/master
 from tastypie.bundle import Bundle
 from tastypie.exceptions import ApiFieldError, NotFound
 from tastypie.utils import dict_strip_unicode_keys, make_aware
@@ -442,12 +436,7 @@ class RelatedField(ApiField):
     is_related = True
     help_text = 'A related resource. Can be either a URI or set of nested resource data.'
 
-<<<<<<< HEAD
     def __init__(self, to, attribute, related_name=None, default=NOT_PROVIDED, null=False, blank=False, readonly=False, full=False, unique=False, help_text=None, use_in='all', full_list=True, full_detail=True, verbose_name=None, max_depth=None):
-=======
-    def __init__(self, to, attribute, related_name=None, default=NOT_PROVIDED, null=False, blank=False, readonly=False, full=False, unique=False, help_text=None, use_in='all', verbose_name=None, full_list=True, full_detail=True):
-
->>>>>>> refs/remotes/django-tastypie/master
         """
         Builds the field and prepares it to access to related data.
 
@@ -517,7 +506,6 @@ class RelatedField(ApiField):
 
         self.api_name = None
         self.resource_name = None
-<<<<<<< HEAD
         self.unique = unique
         self._to_class = None
         self.use_in = 'all'
@@ -544,8 +532,6 @@ class RelatedField(ApiField):
         # here (which I think we should avoid as long as possible).
         if self.self_referential or self.to == 'self':
             self._to_class = cls
-=======
->>>>>>> refs/remotes/django-tastypie/master
 
     def get_related_resource(self, related_instance):
         """
@@ -610,7 +596,6 @@ class RelatedField(ApiField):
         """
         should_dehydrate_full_resource = self.should_full_dehydrate(bundle, for_list=for_list)
 
-<<<<<<< HEAD
         if should_dehydrate_full_resource:
             depth = getattr(bundle, 'depth', None)
             if depth is None:
@@ -621,15 +606,6 @@ class RelatedField(ApiField):
 
                 bundle = related_resource.build_bundle(
                 obj=related_resource.instance,
-=======
-        if not should_dehydrate_full_resource:
-            # Be a good netizen.
-            return related_resource.get_resource_uri(bundle)
-        else:
-            # ZOMG extra data and big payloads.
-            bundle = related_resource.build_bundle(
-                obj=bundle.obj,
->>>>>>> refs/remotes/django-tastypie/master
                 request=bundle.request,
                 objects_saved=bundle.objects_saved)
 
@@ -788,22 +764,12 @@ class ToOneField(RelatedField):
 
     def __init__(self, to, attribute, related_name=None, default=NOT_PROVIDED,
                  null=False, blank=False, readonly=False, full=False,
-<<<<<<< HEAD
                  unique=False, help_text=None, use_in='all', full_list=True, full_detail=True, max_depth=None):
-=======
-                 unique=False, help_text=None, use_in='all', verbose_name=None,
-                 full_list=True, full_detail=True):
->>>>>>> refs/remotes/django-tastypie/master
         super(ToOneField, self).__init__(
             to, attribute, related_name=related_name, default=default,
             null=null, blank=blank, readonly=readonly, full=full,
             unique=unique, help_text=help_text, use_in=use_in,
-<<<<<<< HEAD
             full_list=full_list, full_detail=full_detail, max_depth=max_depth
-=======
-            verbose_name=verbose_name, full_list=full_list,
-            full_detail=full_detail
->>>>>>> refs/remotes/django-tastypie/master
         )
 
     def contribute_to_class(self, cls, name):
@@ -845,7 +811,6 @@ class ToOneField(RelatedField):
 
         fk_resource = self.get_related_resource(foreign_obj)
         fk_bundle = Bundle(obj=foreign_obj, request=bundle.request)
-<<<<<<< HEAD
         fk_bundle.fields = getattr(bundle, 'fields', None)
         depth = getattr(bundle, 'depth', None)
         if depth is None:
@@ -853,9 +818,6 @@ class ToOneField(RelatedField):
         if depth is not None:
             fk_bundle.depth = depth - 1
         return self.dehydrate_related(fk_bundle, self.fk_resource, for_list=for_list)
-=======
-        return self.dehydrate_related(fk_bundle, fk_resource, for_list=for_list)
->>>>>>> refs/remotes/django-tastypie/master
 
     def hydrate(self, bundle):
         value = super(ToOneField, self).hydrate(bundle)
@@ -895,22 +857,12 @@ class ToManyField(RelatedField):
 
     def __init__(self, to, attribute, related_name=None, default=NOT_PROVIDED,
                  null=False, blank=False, readonly=False, full=False,
-<<<<<<< HEAD
                  unique=False, help_text=None, use_in='all', full_list=True, full_detail=True, max_depth=None):
-=======
-                 unique=False, help_text=None, use_in='all', verbose_name=None,
-                 full_list=True, full_detail=True):
->>>>>>> refs/remotes/django-tastypie/master
         super(ToManyField, self).__init__(
             to, attribute, related_name=related_name, default=default,
             null=null, blank=blank, readonly=readonly, full=full,
             unique=unique, help_text=help_text, use_in=use_in,
-<<<<<<< HEAD
             full_list=full_list, full_detail=full_detail, max_depth=max_depth
-=======
-            verbose_name=verbose_name, full_list=full_list,
-            full_detail=full_detail
->>>>>>> refs/remotes/django-tastypie/master
         )
 
     def dehydrate(self, bundle, for_list=True):
@@ -946,7 +898,6 @@ class ToManyField(RelatedField):
         if isinstance(the_m2ms, models.Manager):
             the_m2ms = the_m2ms.all()
 
-<<<<<<< HEAD
         depth = getattr(bundle, 'depth', None)
         if depth is None:
             depth = self.max_depth
@@ -961,16 +912,6 @@ class ToManyField(RelatedField):
             if depth is not None:
                 m2m_bundle.depth = depth - 1
             m2m_dehydrated.append(self.dehydrate_related(m2m_bundle, m2m_resource, for_list=for_list))
-=======
-        m2m_dehydrated = [
-            self.dehydrate_related(
-                Bundle(obj=m2m, request=bundle.request),
-                self.get_related_resource(m2m),
-                for_list=for_list
-            )
-            for m2m in the_m2ms
-        ]
->>>>>>> refs/remotes/django-tastypie/master
 
         return m2m_dehydrated
 

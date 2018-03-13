@@ -7,26 +7,17 @@ import sys
 from time import mktime
 import traceback
 import warnings
-<<<<<<< HEAD
-import django
-=======
 from wsgiref.handlers import format_date_time
->>>>>>> refs/remotes/django-tastypie/master
 
 import django
 from django.conf import settings
 from django.conf.urls import url
-<<<<<<< HEAD
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, ValidationError
-from django.core.urlresolvers import NoReverseMatch, reverse, resolve, Resolver404, get_script_prefix
-=======
 from django.core.exceptions import (
     ObjectDoesNotExist, MultipleObjectsReturned, ValidationError,
 )
 from django.core.urlresolvers import (
     NoReverseMatch, reverse, Resolver404, get_script_prefix
 )
->>>>>>> refs/remotes/django-tastypie/master
 from django.core.signals import got_request_exception
 from django.core.exceptions import ImproperlyConfigured
 try:
@@ -70,44 +61,6 @@ from tastypie.utils.mime import determine_format, build_content_type
 from tastypie.validation import Validation
 # from tastypie.compat import atomic_decorator
 
-<<<<<<< HEAD
-# If ``csrf_exempt`` isn't present, stub it.
-try:
-    from django.views.decorators.csrf import csrf_exempt
-except ImportError:
-    def csrf_exempt(func):
-        return func
-
-AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
-
-# Django 1.5+ compatibility
-if django.VERSION >= (1, 5):
-    def get_user_model():
-        from django.contrib.auth import get_user_model as django_get_user_model
-
-        return django_get_user_model()
-
-    def get_username_field():
-        return get_user_model().USERNAME_FIELD
-else:
-    def get_user_model():
-        from django.contrib.auth.models import User
-
-        return User
-
-    def get_username_field():
-        return 'username'
-
-def get_module_name(meta):
-    return getattr(meta, 'model_name', None) or getattr(meta, 'module_name')
-
-# commit_on_success replaced by atomic in Django >=1.8
-atomic_decorator = getattr(django.db.transaction, 'atomic', None) or getattr(django.db.transaction, 'commit_on_success')
-
-def get_module_name(meta):
-    return getattr(meta, 'model_name', None) or getattr(meta, 'module_name')
-=======
->>>>>>> refs/remotes/django-tastypie/master
 
 def sanitize(text):
     # We put the single quotes back, due to their frequent usage in exception
@@ -184,21 +137,11 @@ class DeclarativeMetaclass(type):
         # Simulate the MRO.
         parents.reverse()
 
-<<<<<<< HEAD
-            for p in parents:
-                parent_fields = getattr(p, 'base_fields', {})
-                fields_list = parent_fields.items()
-                for field_name, field_object in fields_list:
-                    attrs['base_fields'][field_name] = deepcopy(field_object)
-        except NameError:
-            pass
-=======
         for p in parents:
             parent_fields = getattr(p, 'base_fields', {})
 
             for field_name, field_object in parent_fields.items():
                 attrs['base_fields'][field_name] = deepcopy(field_object)
->>>>>>> refs/remotes/django-tastypie/master
 
         fields_list = attrs.copy().items()
         for field_name, obj in fields_list:
@@ -248,15 +191,11 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
     data sources, such as search results, files, other data, etc.
     """
     def __init__(self, api_name=None):
-<<<<<<< HEAD
-        self.fields = self.base_fields
-=======
         # this can cause:
         # TypeError: object.__new__(method-wrapper) is not safe, use method-wrapper.__new__()
         # when trying to copy a generator used as a default. Wrap call to
         # generator in lambda to get around this error.
         self.fields = {k: copy(v) for k, v in self.base_fields.items()}
->>>>>>> refs/remotes/django-tastypie/master
 
         if api_name is not None:
             self._meta.api_name = api_name
@@ -950,7 +889,6 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         Given a bundle with an object instance, extract the information from it
         to populate the resource.
         """
-<<<<<<< HEAD
         use_in = ['all', 'list' if for_list else 'detail']
         is_authorized = self.is_authorized
         mandatory_fields = self.Meta.mandatory_fields if hasattr(self.Meta, 'mandatory_fields') else []
@@ -960,12 +898,6 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
                 bundle.data[field_name] = bundle.obj.get(field_name)
             bundle = self.dehydrate(bundle)
             return bundle
-=======
-        data = bundle.data
-
-        api_name = self._meta.api_name
-        resource_name = self._meta.resource_name
->>>>>>> refs/remotes/django-tastypie/master
 
         # Dehydrate each field.
         fields_list = self.fields.items()
@@ -1113,14 +1045,8 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         if bundle.obj is None:
             raise HydrationError("You must call 'full_hydrate' before attempting to run 'hydrate_m2m' on %r." % self)
 
-<<<<<<< HEAD
-        fields_list = self.fields.items()
-        for field_name, field_object in fields_list:
-            if not getattr(field_object, 'is_m2m', False):
-=======
         for field_name, field_object in self.fields.items():
             if not field_object.is_m2m:
->>>>>>> refs/remotes/django-tastypie/master
                 continue
 
             if field_object.attribute:
@@ -1162,16 +1088,12 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         if self._meta.filtering:
             data['filtering'] = self._meta.filtering
 
-<<<<<<< HEAD
-        fields_list = self.fields.items()
-=======
         # Skip assigning pk_field_name for non-model resources
         try:
             pk_field_name = self._meta.queryset.model._meta.pk.name
         except AttributeError:
             pk_field_name = None
 
->>>>>>> refs/remotes/django-tastypie/master
         for field_name, field_object in self.fields.items():
             data['fields'][field_name] = {
                 'default': field_object.default,
@@ -1481,7 +1403,6 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         to_be_serialized = paginator.page()
 
         # Dehydrate the bundles in preparation for serialization.
-<<<<<<< HEAD
         bundles = []
 
         if request.GET.get('fields'):
@@ -1509,12 +1430,6 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
             if request.GET.get('fields'):
                 bundle.fields = fields_parsed
             bundles.append(self.full_dehydrate(bundle, for_list=True))
-=======
-        bundles = [
-            self.full_dehydrate(self.build_bundle(obj=obj, request=request), for_list=True)
-            for obj in to_be_serialized[self._meta.collection_name]
-        ]
->>>>>>> refs/remotes/django-tastypie/master
 
         to_be_serialized[self._meta.collection_name] = bundles
         to_be_serialized = self.alter_list_data_to_serialize(request, to_be_serialized)
@@ -2332,14 +2247,8 @@ class BaseModelResource(Resource):
             applicable_filters[self._meta.detail_uri_name] = kwargs[self._meta.detail_uri_name]
 
         try:
-<<<<<<< HEAD
-            object_list = self.get_object_list(bundle.request).filter(**kwargs)
-            kwargs_list = kwargs.items()
-            stringified_kwargs = ', '.join(["%s=%s" % (k, v) for k, v in kwargs_list])
-=======
             object_list = self.apply_filters(bundle.request, applicable_filters)
             stringified_kwargs = ', '.join(["%s=%s" % (k, v) for k, v in applicable_filters.items()])
->>>>>>> refs/remotes/django-tastypie/master
 
             if len(object_list) <= 0:
                 raise self._meta.object_class.DoesNotExist("Couldn't find an instance of '%s' which matched '%s'." % (self._meta.object_class.__name__, stringified_kwargs))
@@ -2536,14 +2445,8 @@ class BaseModelResource(Resource):
         call ``save`` on them if they have related, non-M2M data.
         M2M data is handled by the ``ModelResource.save_m2m`` method.
         """
-<<<<<<< HEAD
-        fields_list = self.fields.items()
-        for field_name, field_object in fields_list:
-            if not getattr(field_object, 'is_related', False):
-=======
         for field_name, field_object in self.fields.items():
             if not field_object.is_related:
->>>>>>> refs/remotes/django-tastypie/master
                 continue
 
             if field_object.is_m2m:
@@ -2625,14 +2528,8 @@ class BaseModelResource(Resource):
         Currently slightly inefficient in that it will clear out the whole
         relation and recreate the related data as needed.
         """
-<<<<<<< HEAD
-        fields_list = self.fields.items()
-        for field_name, field_object in fields_list:
-            if not getattr(field_object, 'is_m2m', False):
-=======
         for field_name, field_object in self.fields.items():
             if not field_object.is_m2m:
->>>>>>> refs/remotes/django-tastypie/master
                 continue
 
             if not field_object.attribute:

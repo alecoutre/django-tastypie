@@ -117,12 +117,8 @@ class Api(object):
             warnings.warn("'override_urls' is a deprecated method & will be removed by v1.0.0. Please rename your method to ``prepend_urls``.")
             urlpatterns += overridden_urls
 
-<<<<<<< HEAD
-        return pattern_list
-=======
         urlpatterns += pattern_list
         return urlpatterns
->>>>>>> refs/remotes/django-tastypie/master
 
     def top_level(self, request, api_name=None):
         """

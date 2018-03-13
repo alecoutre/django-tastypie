@@ -354,10 +354,6 @@ class ResourceTestCaseMixin(object):
         Ensures the response is returning either a HTTP 202 or a HTTP 204.
         """
         self.assertIn(resp.status_code, [202, 204])
-<<<<<<< HEAD
-        self.assertNotIn('Content-Type', resp)
-=======
->>>>>>> refs/remotes/django-tastypie/master
 
     def assertHttpMultipleChoices(self, resp):
         """
@@ -573,8 +569,4 @@ class ResourceTestCase(ResourceTestCaseMixin, TestCase):
             "'ResourceTestCase' is deprecated & will be removed by v1.0.0. "
             "Please use ``ResourceTestCaseMixin`` instead. "
             "For example: ``class MyTest(ResourceTestCaseMixin, django.test.TestCase):``.")
-<<<<<<< HEAD
         super(ResourceTestCase, self).__init__(*args, **kwargs)
-=======
-        super(ResourceTestCase, self).__init__(*args, **kwargs)
->>>>>>> refs/remotes/django-tastypie/master
