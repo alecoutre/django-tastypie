@@ -508,8 +508,6 @@ class RelatedField(ApiField):
         self.unique = unique
         self._to_class = None
         self.use_in = 'all'
-        self.full_list = full_list
-        self.full_detail = full_detail
         self.verbose_name = verbose_name
         self.max_depth = max_depth
 
@@ -800,7 +798,7 @@ class ToOneField(RelatedField):
             depth = self.max_depth
         if depth is not None:
             fk_bundle.depth = depth - 1
-        return self.dehydrate_related(fk_bundle, self.fk_resource, for_list=for_list)
+        return self.dehydrate_related(fk_bundle, fk_resource, for_list=for_list)
 
     def hydrate(self, bundle):
         value = super(ToOneField, self).hydrate(bundle)

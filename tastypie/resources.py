@@ -58,7 +58,7 @@ from tastypie.utils import (
 )
 from tastypie.utils.mime import determine_format, build_content_type
 from tastypie.validation import Validation
-# from tastypie.compat import atomic_decorator
+from tastypie.compat import atomic_decorator
 
 
 def sanitize(text):
@@ -893,7 +893,6 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         Given a bundle with an object instance, extract the information from it
         to populate the resource.
         """
-<<<<<<< HEAD
         data = bundle.data
 
         api_name = self._meta.api_name
