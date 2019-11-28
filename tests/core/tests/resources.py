@@ -1148,6 +1148,24 @@ class RequiredFKNoteResource(ModelResource):
         authorization = Authorization()
 
 
+class NoAttributeFKNoteResource(ModelResource):
+    editor = fields.ForeignKey(UserResource, None)
+
+    class Meta:
+        resource_name = 'noattrfknotes'
+        queryset = NoteWithEditor.objects.all()
+        authorization = Authorization()
+
+
+class FunctionAttributeFKNoteResource(ModelResource):
+    editor = fields.ForeignKey(UserResource, lambda bundle: User.objects.first(), null=True)
+
+    class Meta:
+        resource_name = 'fnattrfknotes'
+        queryset = NoteWithEditor.objects.all()
+        authorization = Authorization()
+
+
 class ThrottledNoteResource(NoteResource):
     class Meta:
         resource_name = 'throttlednotes'
@@ -1437,6 +1455,7 @@ class ModelResourceTestCase(TestCase):
     fixtures = ['note_testdata.json']
 
     def setUp(self):
+        self.maxDiff = None
         super(ModelResourceTestCase, self).setUp()
         self.note_1 = Note.objects.get(pk=1)
         self.subject_1 = Subject.objects.create(
@@ -1521,6 +1540,12 @@ class ModelResourceTestCase(TestCase):
 
         resource_6 = CustomPageNoteResource()
         self.assertEqual(resource_6._meta.paginator_class, CustomPaginator)
+
+        # FK fields with non-string attributes
+        resource_7 = NoAttributeFKNoteResource()
+        self.assertEqual(len(resource_7.fields), 9)
+        resource_8 = FunctionAttributeFKNoteResource()
+        self.assertEqual(len(resource_8.fields), 9)
 
     def test_can_create(self):
         resource_1 = NoteResource()
@@ -2101,12 +2126,17 @@ class ModelResourceTestCase(TestCase):
         resource_4 = AnotherSubjectResource()
         self.assertEqual(resource_4.build_filters(filters={'notes__user__startswith': 'Daniel'}), {'notes__author__startswith': 'Daniel'})
 
-        # Make sure that fields that don't have attributes can't be filtered on.
-        self.assertRaises(InvalidFilterError, resource_4.build_filters, filters={'notes__hello_world': 'News'})
-
         # Make sure build_filters works even on resources without queryset
         resource = NoQuerysetNoteResource()
         self.assertEqual(resource.build_filters(), {})
+
+    def test_build_filters_bad(self):
+        """
+        Test that a nonsensical filter fails validation.
+        """
+        resource = AnotherSubjectResource()
+        # Make sure that fields that don't have attributes can't be filtered on.
+        self.assertRaises(InvalidFilterError, resource.build_filters, filters={'notes__hello_world': 'News'})
 
     def test_custom_build_filters(self):
         """
@@ -2883,6 +2913,25 @@ class ModelResourceTestCase(TestCase):
         self.assertNotIn('Content-Type', resp)
         new_note = Note.objects.get(slug='cat-is-back-again')
         self.assertEqual(new_note.author, author)
+
+    def test_put_detail_with_always_return(self):
+        # Check for issue #1576
+        resource = AlwaysDataNoteResource()
+        request = HttpRequest()
+        request.GET = {'format': 'json'}
+        resp = resource.get_detail(request, pk=1)
+        self.assertEqual(resp.status_code, 200)
+        resp = json.loads(resp.content.decode('utf-8'))
+
+        request = MockRequest()
+        request.GET = {'format': 'json'}
+        request.method = 'PUT'
+        request.set_body(json.dumps(resp))
+        putresp = resource.put_detail(request, pk=1)
+        self.assertEqual(putresp.status_code, 200)
+        data = json.loads(putresp.content.decode('utf-8'))
+
+        self.assertEqual(set(data.keys()), set(['title', 'slug', 'content', 'is_active', 'created', 'updated', 'id', 'resource_uri']))
 
     def test_put_detail_with_use_in(self):
         new_note = Note.objects.get(slug='another-post')
@@ -3920,7 +3969,8 @@ class ModelResourceTestCase(TestCase):
 
         self.assertEqual(schema['fields'], expected_schema['fields'])
 
-    def test_get_multiple(self):
+    @patch('tastypie.resources.ModelResource.obj_get_list', side_effect=NotImplementedError)
+    def test_get_multiple_without_queryset(self, obj_get_list_mock):
         resource = NoteResource()
         request = HttpRequest()
         request.GET = {'format': 'json'}
@@ -3939,6 +3989,31 @@ class ModelResourceTestCase(TestCase):
         self.assertEqual(resp.content.decode('utf-8'), '{"not_found": ["3"], "objects": [{"content": "The dog ate my cat today. He looks seriously uncomfortable.", "created": "2010-03-31T20:05:00", "id": 2, "is_active": true, "resource_uri": "/api/v1/notes/2/", "slug": "another-post", "title": "Another Post", "updated": "2010-03-31T20:05:00"}]}')
 
         resp = resource.get_multiple(request, pk_list='1;2;4;6')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content.decode('utf-8'), '{"objects": [{"content": "This is my very first post using my shiny new API. Pretty sweet, huh?", "created": "2010-03-30T20:05:00", "id": 1, "is_active": true, "resource_uri": "/api/v1/notes/1/", "slug": "first-post", "title": "First Post!", "updated": "2010-03-30T20:05:00"}, {"content": "The dog ate my cat today. He looks seriously uncomfortable.", "created": "2010-03-31T20:05:00", "id": 2, "is_active": true, "resource_uri": "/api/v1/notes/2/", "slug": "another-post", "title": "Another Post", "updated": "2010-03-31T20:05:00"}, {"content": "My neighborhood\'s been kinda weird lately, especially after the lava flow took out the corner store. Granny can hardly outrun the magma with her walker.", "created": "2010-04-01T20:05:00", "id": 4, "is_active": true, "resource_uri": "/api/v1/notes/4/", "slug": "recent-volcanic-activity", "title": "Recent Volcanic Activity.", "updated": "2010-04-01T20:05:00"}, {"content": "Man, the second eruption came on fast. Granny didn\'t have a chance. On the upshot, I was able to save her walker and I got a cool shawl out of the deal!", "created": "2010-04-02T10:05:00", "id": 6, "is_active": true, "resource_uri": "/api/v1/notes/6/", "slug": "grannys-gone", "title": "Granny\'s Gone", "updated": "2010-04-02T10:05:00"}]}')
+
+    def test_get_multiple(self):
+        resource = NoteResource()
+        request = HttpRequest()
+        request.GET = {'format': 'json'}
+        request.method = 'GET'
+
+        resp = resource.get_multiple(request, pk_list='1')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content.decode('utf-8'), '{"objects": [{"content": "This is my very first post using my shiny new API. Pretty sweet, huh?", "created": "2010-03-30T20:05:00", "id": 1, "is_active": true, "resource_uri": "/api/v1/notes/1/", "slug": "first-post", "title": "First Post!", "updated": "2010-03-30T20:05:00"}]}')
+
+        with self.assertNumQueries(1):
+            resp = resource.get_multiple(request, pk_list='1;2')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content.decode('utf-8'), '{"objects": [{"content": "This is my very first post using my shiny new API. Pretty sweet, huh?", "created": "2010-03-30T20:05:00", "id": 1, "is_active": true, "resource_uri": "/api/v1/notes/1/", "slug": "first-post", "title": "First Post!", "updated": "2010-03-30T20:05:00"}, {"content": "The dog ate my cat today. He looks seriously uncomfortable.", "created": "2010-03-31T20:05:00", "id": 2, "is_active": true, "resource_uri": "/api/v1/notes/2/", "slug": "another-post", "title": "Another Post", "updated": "2010-03-31T20:05:00"}]}')
+
+        with self.assertNumQueries(1):
+            resp = resource.get_multiple(request, pk_list='2;3')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content.decode('utf-8'), '{"not_found": ["3"], "objects": [{"content": "The dog ate my cat today. He looks seriously uncomfortable.", "created": "2010-03-31T20:05:00", "id": 2, "is_active": true, "resource_uri": "/api/v1/notes/2/", "slug": "another-post", "title": "Another Post", "updated": "2010-03-31T20:05:00"}]}')
+
+        with self.assertNumQueries(1):
+            resp = resource.get_multiple(request, pk_list='1;2;4;6')
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.content.decode('utf-8'), '{"objects": [{"content": "This is my very first post using my shiny new API. Pretty sweet, huh?", "created": "2010-03-30T20:05:00", "id": 1, "is_active": true, "resource_uri": "/api/v1/notes/1/", "slug": "first-post", "title": "First Post!", "updated": "2010-03-30T20:05:00"}, {"content": "The dog ate my cat today. He looks seriously uncomfortable.", "created": "2010-03-31T20:05:00", "id": 2, "is_active": true, "resource_uri": "/api/v1/notes/2/", "slug": "another-post", "title": "Another Post", "updated": "2010-03-31T20:05:00"}, {"content": "My neighborhood\'s been kinda weird lately, especially after the lava flow took out the corner store. Granny can hardly outrun the magma with her walker.", "created": "2010-04-01T20:05:00", "id": 4, "is_active": true, "resource_uri": "/api/v1/notes/4/", "slug": "recent-volcanic-activity", "title": "Recent Volcanic Activity.", "updated": "2010-04-01T20:05:00"}, {"content": "Man, the second eruption came on fast. Granny didn\'t have a chance. On the upshot, I was able to save her walker and I got a cool shawl out of the deal!", "created": "2010-04-02T10:05:00", "id": 6, "is_active": true, "resource_uri": "/api/v1/notes/6/", "slug": "grannys-gone", "title": "Granny\'s Gone", "updated": "2010-04-02T10:05:00"}]}')
 

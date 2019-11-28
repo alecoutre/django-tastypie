@@ -9,11 +9,10 @@ import traceback
 import warnings
 from wsgiref.handlers import format_date_time
 
-import django
 from django.conf import settings
 from django.conf.urls import url
 from django.core.exceptions import (
-    ObjectDoesNotExist, MultipleObjectsReturned, ValidationError,
+    ObjectDoesNotExist, MultipleObjectsReturned, ValidationError, FieldDoesNotExist
 )
 from django.core.signals import got_request_exception
 from django.core.exceptions import ImproperlyConfigured
@@ -29,7 +28,7 @@ try:
 except ImportError:
     from django.db.models.fields.related_descriptors import\
         ReverseOneToOneDescriptor
-from django.db.models.sql.constants import QUERY_TERMS
+
 from django.http import HttpResponse, HttpResponseNotFound, Http404
 from django.utils import six
 from django.utils.cache import patch_cache_control, patch_vary_headers
@@ -1825,8 +1824,11 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         Returns a serialized list of resources based on the identifiers
         from the URL.
 
-        Calls ``obj_get`` to fetch only the objects requested. This method
-        only responds to HTTP GET.
+        Calls ``obj_get_list`` to fetch only the objects requests in
+        a single query. This method only responds to HTTP GET.
+
+        For backward compatibility the method ``obj_get`` is used if
+        ``obj_get_list`` is not implemented.
 
         Should return a HttpResponse (200 OK).
         """
@@ -1841,14 +1843,39 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         not_found = []
         base_bundle = self.build_bundle(request=request)
 
-        for identifier in obj_identifiers:
-            try:
-                obj = self.obj_get(bundle=base_bundle, **{self._meta.detail_uri_name: identifier})
-                bundle = self.build_bundle(obj=obj, request=request)
-                bundle = self.full_dehydrate(bundle, for_list=True)
-                objects.append(bundle)
-            except (ObjectDoesNotExist, Unauthorized):
-                not_found.append(identifier)
+        # We will try to get a queryset from obj_get_list.
+        queryset = None
+
+        try:
+            queryset = self.obj_get_list(bundle=base_bundle).filter(
+                **{self._meta.detail_uri_name + '__in': obj_identifiers})
+        except NotImplementedError:
+            pass
+
+        if queryset is not None:
+            # Fetch the objects from the queryset to a dictionary.
+            objects_dict = {}
+            for obj in queryset:
+                objects_dict[str(getattr(obj, self._meta.detail_uri_name))] = obj
+
+            # Walk the list of identifiers in order and get the objects or feed the not_found list.
+            for identifier in obj_identifiers:
+                if identifier in objects_dict:
+                    bundle = self.build_bundle(obj=objects_dict[identifier], request=request)
+                    bundle = self.full_dehydrate(bundle, for_list=True)
+                    objects.append(bundle)
+                else:
+                    not_found.append(identifier)
+        else:
+            # Use the old way.
+            for identifier in obj_identifiers:
+                try:
+                    obj = self.obj_get(bundle=base_bundle, **{self._meta.detail_uri_name: identifier})
+                    bundle = self.build_bundle(obj=obj, request=request)
+                    bundle = self.full_dehydrate(bundle, for_list=True)
+                    objects.append(bundle)
+                except (ObjectDoesNotExist, Unauthorized):
+                    not_found.append(identifier)
 
         object_list = {
             self._meta.collection_name: objects,
@@ -2123,10 +2150,6 @@ class BaseModelResource(Resource):
 
         qs_filters = {}
 
-        query_terms = QUERY_TERMS
-        if django.VERSION >= (1, 8) and GeometryField:
-            query_terms |= set(GeometryField.class_lookups.keys())
-
         for filter_expr, value in filters.items():
             filter_bits = filter_expr.split(LOOKUP_SEP)
             field_name = filter_bits.pop(0)
@@ -2136,6 +2159,16 @@ class BaseModelResource(Resource):
                 # It's not a field we know about. Move along citizen.
                 continue
 
+            # Validate filter types other than 'exact' that are supported by the field type
+            try:
+                django_field_name = self.fields[field_name].attribute
+                django_field = self._meta.object_class._meta.get_field(django_field_name)
+                if hasattr(django_field, 'field'):
+                    django_field = django_field.field  # related field
+            except FieldDoesNotExist:
+                raise InvalidFilterError("The '%s' field is not a valid field name" % field_name)
+
+            query_terms = django_field.get_lookups().keys()
             if len(filter_bits) and filter_bits[-1] in query_terms:
                 filter_type = filter_bits.pop()
 
@@ -2300,6 +2333,11 @@ class BaseModelResource(Resource):
         lookup parameters that can find them in the DB
         """
         lookup_kwargs = {}
+
+        # Handle detail_uri_name specially
+        if self._meta.detail_uri_name in kwargs:
+            lookup_kwargs[self._meta.detail_uri_name] = kwargs.pop(self._meta.detail_uri_name)
+
         bundle.obj = self.get_object_list(bundle.request).model()
         # Override data values, we rely on uri identifiers
         bundle.data.update(kwargs)
@@ -2309,10 +2347,6 @@ class BaseModelResource(Resource):
         bundle = self.hydrate(bundle)
 
         for identifier in kwargs:
-            if identifier == self._meta.detail_uri_name:
-                lookup_kwargs[identifier] = kwargs[identifier]
-                continue
-
             field_object = self.fields[identifier]
 
             # Skip readonly or related fields.
@@ -2340,7 +2374,7 @@ class BaseModelResource(Resource):
         if bundle_detail_data is None or (arg_detail_data is not None and str(bundle_detail_data) != str(arg_detail_data)):
             try:
                 lookup_kwargs = self.lookup_kwargs_with_identifiers(bundle, kwargs)
-            except:  # flake8: noqa
+            except:  # noqa
                 # if there is trouble hydrating the data, fall back to just
                 # using kwargs by itself (usually it only contains a "pk" key
                 # and this will work fine.
